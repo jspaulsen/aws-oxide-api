@@ -1,0 +1,18 @@
+[package]
+name = "aws-oxide-api"
+version = "0.1.0"
+authors = ["jspaulsen <jpaulsen@lo3energy.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+aws-oxide-api-codegen = { path = "../codegen/" }
+aws-oxide-api-route = { path = "../route/" }
+lambda_http = { git = "https://github.com/awslabs/aws-lambda-rust-runtime" }
+futures = "0.3.5"
+tokio = "0.2.22"
+
+[dev-dependencies]
+tokio = "0.2.22"
+serde_json = "1.0.57"

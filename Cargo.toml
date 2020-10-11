@@ -1,0 +1,7 @@
+
+[workspace]
+members = [
+  "core/codegen/",
+  "core/lib/",
+  "core/route/",
+]
