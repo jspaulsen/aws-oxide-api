@@ -1,3 +1,5 @@
+use core::iter::FromIterator;
+
 use aws_oxide_api::{
     Application,
     IntoResponse,
@@ -9,6 +11,7 @@ use aws_oxide_api::{
 
 use lambda_http::{
     Body,
+    http,
     Response,
 };
 
@@ -29,9 +32,15 @@ async fn main() {
     );
     let expected_id: i32 = 12345;
     let uri = format!("/some/{}", expected_id);
+    let headers = vec![
+        (http::header::HeaderName::from_static("x-bogus-header"), http::HeaderValue::from_static("bogus"))
+    ];
 
     let result = app
-        .get(uri, None)
+        .get(
+            uri,
+            Some(http::HeaderMap::from_iter(headers)),
+        )
         .await
         .unwrap();
 
@@ -56,7 +65,22 @@ async fn main() {
 
 
 #[route("GET", "/some/:id")]
-async fn example(id: i32) -> Result<impl IntoResponse, ResponseError> {
+async fn example(id: i32, request: Request) -> Result<impl IntoResponse, ResponseError> {
+    let bogus = request
+        .headers()
+        .get("x-bogus-header");
+
+    if let None = bogus {
+        let response = Response::builder()
+            .header("Content-Type", "application/json")
+            .status(401) // for examples sake
+            .body(
+                Body::Text(json!({"id": id}).to_string())
+            )?;
+
+        return Ok(response);
+    };
+
     let response = Response::builder()
         .header("Content-Type", "application/json")
         .status(202) // for examples sake

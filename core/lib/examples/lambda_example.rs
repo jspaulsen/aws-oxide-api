@@ -13,13 +13,16 @@ use lambda_http::{
     Request as LambdaRequest,
 };
 
+use serde_json::json;
 
+
+// not a runnable example as it is expected
+// to be called from the lambda runtime
 #[lambda(http)]
 #[tokio::main]
 async fn main(request: LambdaRequest, context: Context) -> Result<impl IntoResponse, ResponseError> {
     let mut app = Application::builder()
-        .add_route(hello)
-        .add_route(there)
+        .add_route(example_id)
         .build()
         .expect("Failed to build application!");
 
@@ -29,17 +32,7 @@ async fn main(request: LambdaRequest, context: Context) -> Result<impl IntoRespo
 }
 
 
-#[route("GET", "/:id")]
-async fn hello(id: i32) -> Result<impl IntoResponse, ResponseError> {
-    println!("id is {}", id);
-
-    Ok(())
-}
-
-#[route("GET", "/:id")]
-async fn there(id: String, body: Body, state: Request) -> Result<impl IntoResponse, ResponseError> {
-    println!("id is {}", id);
-    println!("State is {:?}", state);
-    println!("Body is {:?}", body);
-    Ok(())
+#[route("GET", "/example/:id")]
+async fn example_id(id: i32, _body: Body) -> Result<impl IntoResponse, ResponseError> {
+    Ok(json!({"id": id}))
 }
