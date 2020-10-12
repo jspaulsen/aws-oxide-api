@@ -1,5 +1,3 @@
-use std::mem;
-
 use lambda_http::{
     Body,
     Context,
@@ -45,7 +43,9 @@ impl<'a> TestApplication<'a> {
             .body(Body::Empty)?;
 
         if let Some(headers) = headers {
-            mem::replace(request.headers_mut(), headers);
+            request
+                .headers_mut()
+                .extend(headers);
         }
 
         self
@@ -60,7 +60,9 @@ impl<'a> TestApplication<'a> {
             .body(body)?;
 
         if let Some(headers) = headers {
-            mem::replace(request.headers_mut(), headers);
+            request
+                .headers_mut()
+                .extend(headers);
         }
 
         self
@@ -75,7 +77,9 @@ impl<'a> TestApplication<'a> {
             .body(body)?;
 
         if let Some(headers) = headers {
-            mem::replace(request.headers_mut(), headers);
+            request
+                .headers_mut()
+                .extend(headers);
         }
 
         self
@@ -90,7 +94,9 @@ impl<'a> TestApplication<'a> {
             .body(body)?;
 
         if let Some(headers) = headers {
-            mem::replace(request.headers_mut(), headers);
+            request
+                .headers_mut()
+                .extend(headers);
         }
 
         self
@@ -105,7 +111,9 @@ impl<'a> TestApplication<'a> {
             .body(Body::Empty)?;
 
         if let Some(headers) = headers {
-            mem::replace(request.headers_mut(), headers);
+            request
+                .headers_mut()
+                .extend(headers);
         }
 
         self
@@ -113,15 +121,3 @@ impl<'a> TestApplication<'a> {
             .await
     }
 }
-
-
-// app
-// .handle(request, Context::default())
-// .await
-// .unwrap();
-    // /// Entrypoint from Lambda main
-    // pub async fn handle(&mut self, event: LambdaRequest, _context: Context) -> Result<impl IntoResponse, ResponseError> {
-    //     self.call_req(
-    //         event.into()
-    //     ).await
-    // }
