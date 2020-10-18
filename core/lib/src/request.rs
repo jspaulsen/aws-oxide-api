@@ -23,7 +23,7 @@ pub struct InnerRequest {
 }
 
 #[derive(Clone, Debug)]
-pub struct Request {
+pub struct OxideRequest {
     pub inner: Arc<InnerRequest>,
 }
 
@@ -40,7 +40,7 @@ impl InnerRequest {
     }
 }
 
-impl Request {
+impl OxideRequest {
     pub fn incoming_route(&self) -> &IncomingRoute {
         &self.inner.incoming
     }
@@ -59,7 +59,7 @@ impl Request {
 }
 
 
-impl From<LambdaRequest> for Request {
+impl From<LambdaRequest> for OxideRequest {
     fn from(request: LambdaRequest) -> Self {
         Self {
             inner: Arc::new(

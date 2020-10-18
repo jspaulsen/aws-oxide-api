@@ -2,7 +2,6 @@ use aws_oxide_api::{
     Application,
     IntoResponse,
     ResponseError,
-    Request,
     route,
 };
 

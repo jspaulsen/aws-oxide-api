@@ -145,7 +145,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         #(#attrs)*
-        async fn #fn_shim(request: Request, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
+        async fn #fn_shim(request: aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
             let #mapping = route.mapped_param_value(request.incoming_route());
 
             async fn #fn_actual(#inputs) #ret #body
@@ -210,7 +210,7 @@ fn parameter_match_expansion(mapping: &Ident, parameter: &Parameter) -> Result<(
                 };
             }
         },
-        "Request" => {
+        "OxideRequest" => {
             quote! {
                 let #pname_v = request.clone();
             }

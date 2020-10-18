@@ -20,13 +20,13 @@ use crate::{
         ResponseResult,
         RouteOutcome,
     },
-    request::Request,
+    request::OxideRequest,
 };
 
 use aws_oxide_api_route::Route;
 
 pub type SharedRoute = Arc<Route>;
-type RouteFunction<'a> = Box<dyn FnMut(Request, Arc<Route>) -> futures::future::BoxFuture<'static, RouteOutcome> + Send + 'a>;
+type RouteFunction<'a> = Box<dyn FnMut(OxideRequest, Arc<Route>) -> futures::future::BoxFuture<'static, RouteOutcome> + Send + 'a>;
 
 
 /// Route object which is stored and
@@ -72,12 +72,12 @@ impl<'a> ApplicationBuilder<'a> {
 impl<'a> RouteBuilder<'a> {
     pub fn new<Func, Fut>(route: Route, mut func: Func) -> Self
     where
-        Func: (FnMut(Request, SharedRoute) -> Fut) + Send + 'static,
+        Func: (FnMut(OxideRequest, SharedRoute) -> Fut) + Send + 'static,
         Fut: Future<Output = RouteOutcome> + Send + 'static,
     {
         Self {
             route,
-            func: Box::new(move |req: Request, route: SharedRoute| Box::pin(func(req, route))),
+            func: Box::new(move |req: OxideRequest, route: SharedRoute| Box::pin(func(req, route))),
         }
     }
 }
@@ -119,7 +119,7 @@ impl<'a> Application<'a> {
     }
 
     /// Handles the logic
-    pub async fn call_req(&mut self, request: Request) -> ResponseResult {
+    pub async fn call_req(&mut self, request: OxideRequest) -> ResponseResult {
         let incoming_route = request.incoming_route();
         let outgoing = {
             let mut ret: Option<ResponseResult> = None;
@@ -149,7 +149,7 @@ impl<'a> Application<'a> {
     }
 }
 
-async fn default_no_route(_: &Request) -> ResponseResult {
+async fn default_no_route(_: &OxideRequest) -> ResponseResult {
     Ok(method_not_found())
 }
 
@@ -172,12 +172,12 @@ mod tests {
             SharedRoute,
         },
         response::RouteOutcome,
-        request::Request,
+        request::OxideRequest,
         route::Route,
     };
 
     // Provides a shim which will always return 204
-    async fn succ_shim(_: Request, _: SharedRoute) -> RouteOutcome {
+    async fn succ_shim(_: OxideRequest, _: SharedRoute) -> RouteOutcome {
         let ret = Response::builder()
             .status(204)
             .body(Body::Empty)
@@ -187,14 +187,14 @@ mod tests {
     }
 
     // Provides a shim which will always forward
-    async fn forward_shim(_: Request, _: SharedRoute) -> RouteOutcome {
+    async fn forward_shim(_: OxideRequest, _: SharedRoute) -> RouteOutcome {
         RouteOutcome::Forward
     }
 
     // This is handled by code generation
     fn route_builder<'a, Func, Fut>(method: &'a str, uri: &'a str, func: Func) -> impl FnOnce() -> RouteBuilder<'a>
     where
-        Func: (FnMut(Request, SharedRoute) -> Fut) + Send + 'static,
+        Func: (FnMut(OxideRequest, SharedRoute) -> Fut) + Send + 'static,
         Fut: Future<Output = RouteOutcome> + Send + 'static,
     {
         move || {

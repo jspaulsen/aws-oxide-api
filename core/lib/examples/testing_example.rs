@@ -3,8 +3,8 @@ use core::iter::FromIterator;
 use aws_oxide_api::{
     Application,
     IntoResponse,
+    OxideRequest,
     ResponseError,
-    Request,
     route,
     TestApplication,
 };
@@ -65,7 +65,7 @@ async fn main() {
 
 
 #[route("GET", "/some/:id")]
-async fn example(id: i32, request: Request) -> Result<impl IntoResponse, ResponseError> {
+async fn example(id: i32, request: OxideRequest) -> Result<impl IntoResponse, ResponseError> {
     let bogus = request
         .headers()
         .get("x-bogus-header");

@@ -8,7 +8,7 @@ pub use response::{
     ResponseResult,
     RouteOutcome,
 };
-pub use request::Request;
+pub use request::OxideRequest;
 pub use testing::TestApplication;
 
 pub use aws_oxide_api_route as route;
