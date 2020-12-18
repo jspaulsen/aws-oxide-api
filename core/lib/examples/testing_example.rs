@@ -63,7 +63,6 @@ async fn main() {
 }
 
 
-
 #[route("GET", "/some/:id")]
 async fn example(id: i32, request: OxideRequest) -> Result<impl IntoResponse, ResponseError> {
     let bogus = request

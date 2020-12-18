@@ -45,6 +45,7 @@ struct Parameter<'a> {
 pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = syn::parse_macro_input!(item as ItemFn);
+    let asyncness = &input.sig.asyncness;
     let attrs = &input.attrs;
     let ret = &input.sig.output;
     let fn_name = &input.sig.ident;
@@ -123,6 +124,12 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         };
     }
 
+    let await_fn = if asyncness.is_some() {
+        Some(quote! {.await})
+    } else {
+        None
+    };
+
     // Code generation is a little convoluted; here's the TL;DR
     // Two functions are generated:  {fn}_shim and the RouteBuilder returning {fn}
 
@@ -148,13 +155,14 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         async fn #fn_shim(request: aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
             let #mapping = route.mapped_param_value(request.incoming_route());
 
-            async fn #fn_actual(#inputs) #ret #body
+            #asyncness fn #fn_actual(#inputs) #ret #body
 
             #(#param_expansion)*
 
+            // #fn_call
             aws_oxide_api::response::RouteOutcome::Response(
                 #fn_actual ( #(#param_ident),* )
-                    .await
+                    #await_fn//.await
                     .map(IntoResponse::into_response)
             )
         }
