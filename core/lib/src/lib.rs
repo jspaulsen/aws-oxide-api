@@ -2,6 +2,7 @@ pub use lambda_http::IntoResponse;
 
 pub use application::Application;
 pub use response::{
+    JsonResponse,
     LambdaResponse,
     ResponseError,
     ResponseResult,
@@ -19,7 +20,7 @@ pub use futures;
 pub mod application;
 mod error;
 mod outcome;
-pub mod parameters;
+pub mod guards;
 mod request;
 pub mod response;
 pub mod testing;

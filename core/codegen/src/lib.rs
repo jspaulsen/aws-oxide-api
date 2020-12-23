@@ -1,6 +1,9 @@
 extern crate proc_macro;
-
-use aws_oxide_api_route::Route;
+use std::str::FromStr;
+use aws_oxide_api_route::{
+    Route,
+    RouteUri,
+};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use syn::{
@@ -74,7 +77,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
             };
 
             (method, route)
-        }
+        },
         Err(err) => {
             return TokenStream::from(
                 SynError::new(
@@ -84,6 +87,10 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
             )
         }
     };
+
+    let parsed_route = RouteUri::from_str(
+        &route.value()
+    ).expect("RouteUri failed to parse despite earlier validation");
 
     // For each parameter in the function signature parse and generate
     // code based on what it is.
@@ -101,6 +108,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
                 };
 
                 let param_match_expansion = parameter_match_expansion(
+                    &parsed_route,
                     &mapping,
                     &parameter,
                 );
@@ -203,39 +211,51 @@ fn parse_literal_argument(lit: &NestedMeta) -> Result<&LitStr, &str> {
 }
 
 
-fn parameter_match_expansion(mapping: &Ident, parameter: &Parameter) -> Result<(Ident, impl ToTokens), &'static str> {
+fn parameter_match_expansion(route_template: &RouteUri, mapping: &Ident, parameter: &Parameter) -> Result<(Ident, impl ToTokens), &'static str> {
     let param_name = parameter.param_name;
     let pname_v = format_ident!("{}_v", param_name);
-    let param_type = &parameter.param_type;
-    let param_type_lit = format!("{}", param_type.param_type);
+    let param_name_lit = format!("{}", param_name);
 
-    let tokens = match &*param_type_lit {
-        "Body" => { // TODO: This may be better suited as a SharedBody, an Arc<&Body>
-            quote! {
-                let #pname_v = match request.body() {
-                    lambda_http::Body::Empty => lambda_http::Body::Empty,
-                    lambda_http::Body::Text(body) => lambda_http::Body::Text(body.clone()),
-                    lambda_http::Body::Binary(body) => lambda_http::Body::Binary(body.clone()),
-                };
-            }
-        },
-        "OxideRequest" => {
-            quote! {
-                let #pname_v = request.clone();
-            }
-        },
-        "Json" => json_parameter_match(&parameter, &pname_v)?,
-        _ => { // default behavior is to try and match as a parameter from the route
-            default_parameter_match(&mapping, &parameter, &pname_v)
-        }
+    // if the parameter is found in the route template, generate parameter
+    // match code
+    let tokens = if route_template.contains_parameter(&param_name_lit) {
+        parameter_match(&mapping, &parameter, &pname_v)
+    } else { /* if the parameter is not found in the template it must be a guard */
+        guard_match(&parameter, &pname_v)
     };
 
     Ok((pname_v, tokens))
 }
 
 
+fn guard_match(parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStream {
+    let generic_type = extract_parameter_generic_type(parameter);
+    let param_type = &parameter.param_type;
+    let param_type_ident = format_ident!("{}", param_type.param_type);
+
+    let param_type = match generic_type {
+        Some(generic_type) => {
+            quote! {
+                #param_type_ident::<#generic_type>
+            }
+        },
+        None => {
+            quote! {
+                #param_type_ident
+            }
+        }
+    };
+
+    quote! {
+        let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request) {
+            Some(v) => v,
+            None => return aws_oxide_api::response::RouteOutcome::Forward
+        };
+    }
+}
+
 /// Generates code which attempts to parse
-fn default_parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStream {
+fn parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStream {
     let param_name = parameter.param_name;
     let ptype_parse = parameter.param_type.param_path;
     let pname_lit = format!("{}", param_name);
@@ -251,54 +271,6 @@ fn default_parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ide
             return aws_oxide_api::response::RouteOutcome::Forward;
         };
     }
-}
-
-fn json_parameter_match(parameter: &Parameter, pname_v: &Ident) -> Result<proc_macro2::TokenStream, &'static str> {
-    let generic_type = extract_parameter_generic_type(parameter)
-        .ok_or("Json requires a supported generic type")?;
-
-    let generic_type_ident = format_ident!("{}", generic_type);
-    let pname_v_header = format_ident!("{}_content_type_header", pname_v);
-    let pname_v_body = format_ident!("{}_body", pname_v);
-    let pname_v_deser = format_ident!("{}_deser", pname_v);
-
-    // TODO: we should re-export lambda_http packages as part of aws_oxide_api
-    // to resolve some of these import issues
-    let tokens = quote! {
-        let #pname_v_header = request
-            .headers()
-            .get(aws_oxide_api::http::header::CONTENT_TYPE);
-
-        // if the content type doesn't match the expected application/json
-        // return
-        if let Some(content_type) = #pname_v_header {
-            let content_type_str = if let Ok(content_type) = content_type.to_str() {
-                content_type
-            } else {
-                return aws_oxide_api::response::RouteOutcome::Forward;
-            };
-
-            if content_type_str.to_lowercase() != "application/json" {
-                return aws_oxide_api::response::RouteOutcome::Forward;
-            };
-        } else {
-            return aws_oxide_api::response::RouteOutcome::Forward;
-        };
-
-        let #pname_v_body: String = match request.body() {
-            aws_oxide_api::lambda_http::Body::Text(body) => body.clone(),
-            _ => return aws_oxide_api::response::RouteOutcome::Forward,
-        };
-
-        let #pname_v_deser: #generic_type_ident = match serde_json::from_str(&#pname_v_body) {
-            Ok(v) => v,
-            Err(_) => return aws_oxide_api::response::RouteOutcome::Forward,
-        };
-
-        let #pname_v: aws_oxide_api::parameters::Json<#generic_type_ident> = aws_oxide_api::parameters::Json::new(#pname_v_deser);
-    };
-
-    Ok(tokens)
 }
 
 

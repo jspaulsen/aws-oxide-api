@@ -8,7 +8,7 @@ mod tests {
             Body,
             Context,
         },
-        parameters::Json,
+        guards::Json,
         ResponseError,
         route,
     };

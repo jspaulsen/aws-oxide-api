@@ -1,12 +1,12 @@
 use aws_oxide_api::{
     Application,
+    guards::RequestBody,
     IntoResponse,
     ResponseError,
     route,
 };
 
 use lambda_http::{
-    Body,
     Context,
     lambda::lambda,
     Request as LambdaRequest,
@@ -32,6 +32,6 @@ async fn main(request: LambdaRequest, context: Context) -> Result<impl IntoRespo
 
 
 #[route("GET", "/example/:id")]
-async fn example_id(id: i32, _body: Body) -> Result<impl IntoResponse, ResponseError> {
+async fn example_id(id: i32, _body: RequestBody) -> Result<impl IntoResponse, ResponseError> {
     Ok(json!({"id": id}))
 }

@@ -13,7 +13,7 @@ lambda_http = { git = "https://github.com/awslabs/aws-lambda-rust-runtime" }
 futures = "0.3.5"
 tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
 serde = "1.0.118"
+serde_json = "1.0.57"
 
 [dev-dependencies]
 tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
-serde_json = "1.0.57"

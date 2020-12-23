@@ -54,6 +54,23 @@ impl RouteUri {
     pub fn segments(&self) -> &Vec<RouteSegment> {
         &self.segments
     }
+
+    /// Checks if the RouteUri has a dynamic segment with a
+    /// given named parameter
+    ///
+    /// # Arguments
+    /// * `param` - Parameter name to lookup
+    pub fn contains_parameter(&self, param: &str) -> bool {
+        for segment in &self.segments {
+            if let RouteSegment::Dynamic { parameter } = segment {
+                if parameter == param {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
 }
 
 impl FromStr for RouteUri {
@@ -156,5 +173,15 @@ mod tests {
         assert!(err_character.is_err());
         assert!(err_parameter.is_err());
         assert!(err_no_starting_slash.is_err());
+    }
+
+    #[test]
+    fn test_contains_parameter() {
+        let dynamic = "/foo/:id_a/:id_b/baz/:id_c/".parse::<RouteUri>().unwrap();
+
+        assert_eq!(dynamic.contains_parameter("id_a"), true);
+        assert_eq!(dynamic.contains_parameter("id_b"), true);
+        assert_eq!(dynamic.contains_parameter("id_c"), true);
+        assert_eq!(dynamic.contains_parameter("foo"), false);
     }
 }
