@@ -13,3 +13,4 @@ lambda_http = { git = "https://github.com/awslabs/aws-lambda-rust-runtime" }
 proc-macro2 = "1.0.21"
 syn = "1.0.41"
 quote = "1.0.7"
+serde_json = "1.0.60"

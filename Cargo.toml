@@ -1,7 +1,8 @@
 
 [workspace]
 members = [
-  "core/codegen/",
   "core/lib/",
+  "core/codegen/",
   "core/route/",
+  "core/codegen-test/",
 ]

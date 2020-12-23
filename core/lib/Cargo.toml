@@ -11,8 +11,9 @@ aws-oxide-api-codegen = { path = "../codegen/" }
 aws-oxide-api-route = { path = "../route/" }
 lambda_http = { git = "https://github.com/awslabs/aws-lambda-rust-runtime" }
 futures = "0.3.5"
-tokio = "0.2.22"
+tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
+serde = "1.0.118"
 
 [dev-dependencies]
-tokio = "0.2.22"
+tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
 serde_json = "1.0.57"

@@ -85,6 +85,8 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         }
     };
 
+    // For each parameter in the function signature parse and generate
+    // code based on what it is.
     for fn_arg in inputs {
         match fn_arg {
             FnArg::Typed(pat_type) => {
@@ -208,8 +210,7 @@ fn parameter_match_expansion(mapping: &Ident, parameter: &Parameter) -> Result<(
     let param_type_lit = format!("{}", param_type.param_type);
 
     let tokens = match &*param_type_lit {
-        // TODO: This may be better suited as a SharedBody, an Arc<&Body>
-        "Body" => {
+        "Body" => { // TODO: This may be better suited as a SharedBody, an Arc<&Body>
             quote! {
                 let #pname_v = match request.body() {
                     lambda_http::Body::Empty => lambda_http::Body::Empty,
@@ -223,8 +224,9 @@ fn parameter_match_expansion(mapping: &Ident, parameter: &Parameter) -> Result<(
                 let #pname_v = request.clone();
             }
         },
+        "Json" => json_parameter_match(&parameter, &pname_v)?,
         _ => { // default behavior is to try and match as a parameter from the route
-            parameter_match(&mapping, &parameter, &pname_v)
+            default_parameter_match(&mapping, &parameter, &pname_v)
         }
     };
 
@@ -232,7 +234,8 @@ fn parameter_match_expansion(mapping: &Ident, parameter: &Parameter) -> Result<(
 }
 
 
-fn parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStream {
+/// Generates code which attempts to parse
+fn default_parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStream {
     let param_name = parameter.param_name;
     let ptype_parse = parameter.param_type.param_path;
     let pname_lit = format!("{}", param_name);
@@ -248,6 +251,54 @@ fn parameter_match(mapping: &Ident, parameter: &Parameter, pname_v: &Ident) -> p
             return aws_oxide_api::response::RouteOutcome::Forward;
         };
     }
+}
+
+fn json_parameter_match(parameter: &Parameter, pname_v: &Ident) -> Result<proc_macro2::TokenStream, &'static str> {
+    let generic_type = extract_parameter_generic_type(parameter)
+        .ok_or("Json requires a supported generic type")?;
+
+    let generic_type_ident = format_ident!("{}", generic_type);
+    let pname_v_header = format_ident!("{}_content_type_header", pname_v);
+    let pname_v_body = format_ident!("{}_body", pname_v);
+    let pname_v_deser = format_ident!("{}_deser", pname_v);
+
+    // TODO: we should re-export lambda_http packages as part of aws_oxide_api
+    // to resolve some of these import issues
+    let tokens = quote! {
+        let #pname_v_header = request
+            .headers()
+            .get(aws_oxide_api::http::header::CONTENT_TYPE);
+
+        // if the content type doesn't match the expected application/json
+        // return
+        if let Some(content_type) = #pname_v_header {
+            let content_type_str = if let Ok(content_type) = content_type.to_str() {
+                content_type
+            } else {
+                return aws_oxide_api::response::RouteOutcome::Forward;
+            };
+
+            if content_type_str.to_lowercase() != "application/json" {
+                return aws_oxide_api::response::RouteOutcome::Forward;
+            };
+        } else {
+            return aws_oxide_api::response::RouteOutcome::Forward;
+        };
+
+        let #pname_v_body: String = match request.body() {
+            aws_oxide_api::lambda_http::Body::Text(body) => body.clone(),
+            _ => return aws_oxide_api::response::RouteOutcome::Forward,
+        };
+
+        let #pname_v_deser: #generic_type_ident = match serde_json::from_str(&#pname_v_body) {
+            Ok(v) => v,
+            Err(_) => return aws_oxide_api::response::RouteOutcome::Forward,
+        };
+
+        let #pname_v: aws_oxide_api::parameters::Json<#generic_type_ident> = aws_oxide_api::parameters::Json::new(#pname_v_deser);
+    };
+
+    Ok(tokens)
 }
 
 
@@ -300,7 +351,7 @@ fn extract_parameter_type<'a>(pat_type: &'a PatType) -> Option<ParameterType> {
 }
 
 
-fn _extract_parameter_generic_type<'a>(parameter: &'a Parameter) -> Option<&'a Ident> {
+fn extract_parameter_generic_type<'a>(parameter: &'a Parameter) -> Option<&'a Ident> {
     let param_path = parameter.param_type.param_path;
     let segment = param_path.segments.first()?;
 
