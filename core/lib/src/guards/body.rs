@@ -5,7 +5,10 @@ use std::{
     },
 };
 use crate::{
-    guards::Guard,
+    guards::{
+        Guard,
+        GuardOutcome,
+    },
     lambda_http::Body,
     request::OxideRequest,
 };
@@ -37,14 +40,14 @@ impl DerefMut for RequestBody {
 }
 
 impl Guard for RequestBody {
-    fn from_request(request: OxideRequest) -> Option<Self> {
+    fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
         let body = match request.body() {
             Body::Empty => Body::Empty,
             Body::Text(body) => Body::Text(body.clone()),
             Body::Binary(body) => Body::Binary(body.clone()),
         };
 
-        Some(RequestBody(body))
+        GuardOutcome::Value(RequestBody(body))
     //         quote! {
     //             let #pname_v = match request.body() {
     //                 lambda_http::Body::Empty => lambda_http::Body::Empty,

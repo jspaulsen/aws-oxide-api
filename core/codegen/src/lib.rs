@@ -172,7 +172,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
             // #fn_call
             aws_oxide_api::response::RouteOutcome::Response(
                 #fn_actual ( #(#param_ident),* )
-                    #await_fn//.await
+                    #await_fn
                     .map(IntoResponse::into_response)
             )
         }
@@ -248,8 +248,9 @@ fn guard_match(parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStre
 
     quote! {
         let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request) {
-            Some(v) => v,
-            None => return aws_oxide_api::response::RouteOutcome::Forward
+            aws_oxide_api::guards::GuardOutcome::Value(v) => v,
+            aws_oxide_api::guards::GuardOutcome::Error(err) => return aws_oxide_api::response::RouteOutcome::Response(Ok(err)),
+            aws_oxide_api::guards::GuardOutcome::Forward => return aws_oxide_api::response::RouteOutcome::Forward,
         };
     }
 }

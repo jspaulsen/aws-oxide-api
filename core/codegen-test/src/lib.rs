@@ -98,8 +98,8 @@ mod tests {
         .into_response();
 
         assert_eq!(result_succ.status().as_u16(), 200);
-        assert_eq!(result_fail_body.status().as_u16(), 405);
-        assert_eq!(result_fail_header.status().as_u16(), 405);
+        assert_eq!(result_fail_body.status().as_u16(), 400);
+        assert_eq!(result_fail_header.status().as_u16(), 400);
 
         let returned_body = match result_succ.body() {
             Body::Text(body) => {

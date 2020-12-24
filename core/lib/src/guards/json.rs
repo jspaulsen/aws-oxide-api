@@ -7,8 +7,13 @@ use std::{
 use serde::de::DeserializeOwned;
 use serde_json;
 use crate::{
-    guards::Guard,
+    guards::{
+        Guard,
+        GuardOutcome,
+    },
     http,
+    IntoResponse,
+    JsonResponse,
     lambda_http::Body,
     request::OxideRequest,
 };
@@ -44,7 +49,7 @@ impl<T: DeserializeOwned> DerefMut for Json<T> {
 }
 
 impl<T: DeserializeOwned> Guard for Json<T> {
-    fn from_request(request: OxideRequest) -> Option<Self> {
+    fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
         let header = request
             .headers()
             .get(http::header::CONTENT_TYPE);
@@ -53,13 +58,22 @@ impl<T: DeserializeOwned> Guard for Json<T> {
         if let Some(content_type) = header {
             if let Ok(content_type) = content_type.to_str() {
                 if content_type.to_lowercase() != "application/json" {
-                    return None;
+                    return GuardOutcome::Error(
+                        JsonResponse::bad_request(None)
+                            .into_response()
+                    );
                 }
             } else {
-                return None;
+                return GuardOutcome::Error(
+                    JsonResponse::bad_request(None)
+                        .into_response()
+                );
             };
         } else {
-            return None;
+            return GuardOutcome::Error(
+                JsonResponse::bad_request(None)
+                    .into_response()
+            );
         };
 
         match request.body() {
@@ -67,12 +81,18 @@ impl<T: DeserializeOwned> Guard for Json<T> {
                 let deser: Result<T, _> = serde_json::from_str(body);
 
                 if let Ok(deser) = deser {
-                    Some(Self(deser))
+                    GuardOutcome::Value(Self(deser))
                 } else {
-                    None
+                    GuardOutcome::Error(
+                        JsonResponse::bad_request(None)
+                            .into_response()
+                    )
                 }
             },
-            _ => None
+            _ => return GuardOutcome::Error(
+                JsonResponse::bad_request(None)
+                    .into_response()
+            )
         }
     }
 }

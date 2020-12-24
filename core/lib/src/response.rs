@@ -22,6 +22,7 @@ pub type RouteOutcome = Outcome<ResponseResult>;
 
 /// Represents a JSON response, returning a JSON payload with a
 /// given status code and relevant Content-Type header
+#[derive(Clone)]
 pub struct JsonResponse {
     value: Value,
     status_code: u16,
