@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use lambda_http::http as http;
+use netlify_lambda_http::http as http;
 
 use crate::{
     route_uri::{
@@ -92,7 +92,7 @@ impl Route {
 
 #[cfg(test)]
 mod tests {
-    use lambda_http::{
+    use netlify_lambda_http::{
         Body,
         http::Request,
     };

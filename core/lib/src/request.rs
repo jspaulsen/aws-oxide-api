@@ -3,16 +3,16 @@ use std::{
     sync::Arc,
 };
 
-use lambda_http::{
-    Body,
-    http::{
-        Uri,
-        HeaderMap,
-    },
-    Request as LambdaRequest,
-};
-
 use aws_oxide_api_route::IncomingRoute;
+
+use crate::{
+    http::{
+        HeaderMap,
+        Uri,
+    },
+    LambdaRequest,
+    netlify_lambda_http::Body,
+};
 
 
 #[derive(Debug)]
@@ -105,9 +105,10 @@ pub fn parse_query(uri: &Uri) -> HashMap<String, String> {
 
 #[cfg(test)]
 mod tests {
-    use lambda_http::http::Uri;
-
-    use crate::request::parse_query;
+    use crate::{
+        http::Uri,
+        request::parse_query,
+    };
 
     #[test]
     fn test_parse_query() {

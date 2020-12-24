@@ -1,18 +1,14 @@
 use std::{
     sync::Arc,
 };
-
 use futures::{
     Future,
 };
-use lambda_http::{
-    Context,
-    IntoResponse,
-    Request as LambdaRequest,
-};
-
 use crate::{
+    Context,
     error::OxideError,
+    IntoResponse,
+    LambdaRequest,
     outcome::Outcome,
     response::{
         method_not_found,
@@ -174,20 +170,19 @@ async fn default_no_route(_: &OxideRequest) -> ResponseResult {
 #[cfg(test)]
 mod tests {
     use futures::Future;
-    use lambda_http::{
-        Body,
-        Context,
-        http::Request as HttpRequest,
-        IntoResponse,
-        Response,
-    };
-
     use crate::{
         application::{
             Application,
             RouteBuilder,
             SharedRoute,
         },
+        Context,
+        netlify_lambda_http::{
+            Body,
+            Response,
+        },
+        http::Request as HttpRequest,
+        IntoResponse,
         response::RouteOutcome,
         request::OxideRequest,
         route::Route,

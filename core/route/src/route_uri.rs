@@ -3,7 +3,7 @@ use std::{
     str::FromStr,
 };
 
-use lambda_http::http as http;
+use netlify_lambda_http::http as http;
 
 use crate::{
     error::RouteError,

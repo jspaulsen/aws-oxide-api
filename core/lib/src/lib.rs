@@ -1,4 +1,11 @@
-pub use lambda_http::IntoResponse;
+pub use netlify_lambda_http::{
+    Context,
+    Body,
+    IntoResponse,
+    lambda::lambda,
+    Request as LambdaRequest,
+    Response,
+};
 
 pub use application::Application;
 pub use response::{
@@ -13,8 +20,8 @@ pub use testing::TestApplication;
 
 pub use aws_oxide_api_route as route;
 pub use aws_oxide_api_codegen::route;
-pub use lambda_http;
-pub use lambda_http::http as http;
+pub use netlify_lambda_http;
+pub use netlify_lambda_http::http as http;
 pub use futures;
 
 pub mod application;

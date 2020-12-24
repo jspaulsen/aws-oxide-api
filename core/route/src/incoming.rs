@@ -1,4 +1,4 @@
-use lambda_http::http::{
+use netlify_lambda_http::http::{
     method::Method,
     request::Request,
     uri::Uri,

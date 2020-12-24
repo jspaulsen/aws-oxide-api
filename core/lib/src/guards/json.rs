@@ -14,7 +14,7 @@ use crate::{
     http,
     IntoResponse,
     JsonResponse,
-    lambda_http::Body,
+    netlify_lambda_http::Body,
     request::OxideRequest,
 };
 

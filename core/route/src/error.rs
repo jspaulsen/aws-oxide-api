@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::fmt;
 
-use lambda_http::http as http;
+use netlify_lambda_http::http as http;
 
 #[derive(Debug)]
 pub enum RouteError {

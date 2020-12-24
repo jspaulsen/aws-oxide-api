@@ -1,14 +1,11 @@
 use aws_oxide_api::{
     Application,
+    Body,
+    Context,
+    http,
     IntoResponse,
     ResponseError,
     route,
-};
-
-use lambda_http::{
-    Body,
-    http as http,
-    lambda::{Context},
 };
 
 use serde_json::json;

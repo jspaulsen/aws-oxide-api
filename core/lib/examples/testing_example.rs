@@ -2,17 +2,14 @@ use core::iter::FromIterator;
 
 use aws_oxide_api::{
     Application,
+    Body,
+    http,
     IntoResponse,
     OxideRequest,
+    Response,
     ResponseError,
     route,
     TestApplication,
-};
-
-use lambda_http::{
-    Body,
-    http,
-    Response,
 };
 
 use serde_json::{

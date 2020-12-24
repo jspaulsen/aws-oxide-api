@@ -1,16 +1,15 @@
-use lambda_http::{
-    Body,
+use crate::{
+    Application,
     Context,
     http::{
         HeaderMap,
         self,
     },
     IntoResponse,
-    Request,
-};
-
-use crate::{
-    Application,
+    netlify_lambda_http::{
+        Body,
+        Request,
+    },
     response::{
         LambdaResponse,
         ResponseError,

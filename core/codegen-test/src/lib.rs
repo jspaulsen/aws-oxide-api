@@ -2,12 +2,10 @@
 mod tests {
     use aws_oxide_api::{
         Application,
+        Body,
+        Context,
         http::Request as HttpRequest,
         IntoResponse,
-        lambda_http::{
-            Body,
-            Context,
-        },
         guards::Json,
         ResponseError,
         route,

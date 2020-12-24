@@ -9,7 +9,7 @@ use crate::{
         Guard,
         GuardOutcome,
     },
-    lambda_http::Body,
+    netlify_lambda_http::Body,
     request::OxideRequest,
 };
 
