@@ -10,10 +10,12 @@ edition = "2018"
 aws-oxide-api-codegen = { path = "../codegen/" }
 aws-oxide-api-route = { path = "../route/" }
 futures = "0.3.5"
-tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
+tokio = {"version" = "0.2.24"}
 serde = "1.0.118"
 serde_json = "1.0.57"
 netlify_lambda_http = "0.1.2"
+async-trait = "0.1.42"
+state = { version = "0.4" }
 
 [dev-dependencies]
-tokio = {"version" = "0.3.6", features=["macros", "rt-multi-thread"]}
+tokio = {"version" = "0.2.24"}

@@ -4,7 +4,7 @@ use std::{
 };
 
 use aws_oxide_api_route::IncomingRoute;
-
+use state::Container;
 use crate::{
     http::{
         HeaderMap,
@@ -14,33 +14,44 @@ use crate::{
     netlify_lambda_http::Body,
 };
 
-
-#[derive(Debug)]
 pub struct InnerRequest {
     request: LambdaRequest,
     incoming: IncomingRoute,
     parameters: HashMap<String, String>,
+    pub container: Arc<Container>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct OxideRequest {
     pub inner: Arc<InnerRequest>,
 }
 
 impl InnerRequest {
-    fn new(request: LambdaRequest) -> Self {
+    fn new(request: LambdaRequest, container: Arc<Container>) -> Self {
         let incoming = IncomingRoute::from(&request);
         let parameters = parse_query(&request.uri());
 
         Self {
             request,
             incoming,
-            parameters
+            parameters,
+            container,
         }
     }
 }
 
 impl OxideRequest {
+    pub fn new(request: LambdaRequest, container: Arc<Container>) -> Self {
+        Self {
+            inner: Arc::new(
+                InnerRequest::new(
+                    request,
+                    container,
+                )
+            )
+        }
+    }
+
     pub fn incoming_route(&self) -> &IncomingRoute {
         &self.inner.incoming
     }
@@ -59,19 +70,8 @@ impl OxideRequest {
 }
 
 
-impl From<LambdaRequest> for OxideRequest {
-    fn from(request: LambdaRequest) -> Self {
-        Self {
-            inner: Arc::new(
-                InnerRequest::new(request)
-            )
-        }
-    }
-}
-
-
 pub fn parse_query(uri: &Uri) -> HashMap<String, String> {
-    match uri.query() { // key=value&key2=value2&key3#fragid
+    match uri.query() {
         Some(params) => {
             let mut ret: HashMap<String, String> = HashMap::new();
             let split_params: Vec<&str> = params

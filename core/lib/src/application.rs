@@ -4,6 +4,7 @@ use std::{
 use futures::{
     Future,
 };
+use state::Container;
 use crate::{
     Context,
     error::OxideError,
@@ -25,6 +26,8 @@ pub type SharedRoute = Arc<Route>;
 type RouteFunction<'a> = Box<dyn FnMut(OxideRequest, Arc<Route>) -> futures::future::BoxFuture<'static, RouteOutcome> + Send + 'a>;
 
 
+pub static CONTAINER: Container = Container::new();
+
 /// Route object which is stored and
 /// associated with a handler function
 struct StoredRoute<'a> {
@@ -33,11 +36,13 @@ struct StoredRoute<'a> {
 }
 
 pub struct ApplicationBuilder<'a> {
-    routes: Vec<StoredRoute<'a>>
+    routes: Vec<StoredRoute<'a>>,
+    container: Container,
 }
 
 pub struct Application<'a> {
     routes: Vec<StoredRoute<'a>>,
+    container: Arc<Container>,
 }
 
 pub struct RouteBuilder<'a> {
@@ -75,10 +80,16 @@ impl<'a> ApplicationBuilder<'a> {
 
     pub fn build(self) -> Result<Application<'a>, OxideError> {
         let ret = Application::new(
-            self.routes
+            self.routes,
+            self.container,
         );
 
         Ok(ret)
+    }
+
+    pub fn manage<T: Sync + Send + 'static>(self, data: T) -> Self {
+        self.container.set(data);
+        self
     }
 }
 
@@ -108,15 +119,17 @@ impl<'a> Default for ApplicationBuilder<'a> {
     fn default() -> Self {
         Self {
             routes: Vec::new(),
+            container: Container::new(),
         }
     }
 }
 
 
 impl<'a> Application<'a> {
-    fn new(routes: Vec<StoredRoute<'a>>) -> Self {
+    fn new(routes: Vec<StoredRoute<'a>>, container: Container) -> Self {
         Self {
             routes,
+            container: Arc::new(container),
         }
     }
 
@@ -126,9 +139,14 @@ impl<'a> Application<'a> {
 
     /// Entrypoint from Lambda main
     pub async fn handle(&mut self, event: LambdaRequest, _context: Context) -> Result<impl IntoResponse, ResponseError> {
-        self.call_req(
-            event.into()
-        ).await
+        let request = OxideRequest::new(
+            event,
+            self
+                .container
+                .clone()
+        );
+
+        self.call_req(request).await
     }
 
     /// Handles the logic

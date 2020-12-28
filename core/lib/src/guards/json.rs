@@ -4,6 +4,7 @@ use std::{
         DerefMut,
     },
 };
+use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use serde_json;
 use crate::{
@@ -48,8 +49,9 @@ impl<T: DeserializeOwned> DerefMut for Json<T> {
     }
 }
 
+#[async_trait]
 impl<T: DeserializeOwned> Guard for Json<T> {
-    fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
+    async fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
         let header = request
             .headers()
             .get(http::header::CONTENT_TYPE);

@@ -8,6 +8,7 @@ pub use netlify_lambda_http::{
 };
 
 pub use application::Application;
+pub use error::OxideError;
 pub use response::{
     JsonResponse,
     LambdaResponse,
@@ -15,6 +16,8 @@ pub use response::{
     ResponseResult,
     RouteOutcome,
 };
+pub use crate::state::State;
+pub use guards::Guard;
 pub use request::OxideRequest;
 pub use testing::TestApplication;
 
@@ -25,9 +28,10 @@ pub use netlify_lambda_http::http as http;
 pub use futures;
 
 pub mod application;
-mod error;
+pub mod error;
 mod outcome;
 pub mod guards;
 mod request;
 pub mod response;
+mod state;
 pub mod testing;

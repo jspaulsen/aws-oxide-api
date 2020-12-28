@@ -12,7 +12,7 @@ use syn::{
     FnArg,
     GenericArgument,
     Ident,
-    ItemFn,
+    ImplItemMethod,
     Lit,
     LitStr,
     NestedMeta,
@@ -47,7 +47,8 @@ struct Parameter<'a> {
 #[proc_macro_attribute]
 pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
-    let input = syn::parse_macro_input!(item as ItemFn);
+    let input = syn::parse_macro_input!(item as ImplItemMethod);
+    let vis = &input.vis;
     let asyncness = &input.sig.asyncness;
     let attrs = &input.attrs;
     let ret = &input.sig.output;
@@ -149,7 +150,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     // The route function name is replaced with a function that returns a RouteBuilder containing a reference
     // to the route and the shimmed function.
     let ret = quote_spanned! { input.span() =>
-        fn #fn_name<'a>() -> aws_oxide_api::application::RouteBuilder<'a> {
+        #vis fn #fn_name<'a>() -> aws_oxide_api::application::RouteBuilder<'a> {
             let route = aws_oxide_api::route::Route::new(
                 #method,
                 #route,
@@ -162,7 +163,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         #(#attrs)*
-        async fn #fn_shim(request: aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
+        pub async fn #fn_shim(request: aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
             let #mapping = route.mapped_param_value(request.incoming_route());
 
             #asyncness fn #fn_actual(#inputs) #ret #body
@@ -247,7 +248,7 @@ fn guard_match(parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStre
     };
 
     quote! {
-        let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request) {
+        let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request.clone()).await {
             aws_oxide_api::guards::GuardOutcome::Value(v) => v,
             aws_oxide_api::guards::GuardOutcome::Error(err) => return aws_oxide_api::response::RouteOutcome::Response(Ok(err)),
             aws_oxide_api::guards::GuardOutcome::Forward => return aws_oxide_api::response::RouteOutcome::Forward,
