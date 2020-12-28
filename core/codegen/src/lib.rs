@@ -150,7 +150,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     // The route function name is replaced with a function that returns a RouteBuilder containing a reference
     // to the route and the shimmed function.
     let ret = quote_spanned! { input.span() =>
-        #vis fn #fn_name<'a>() -> aws_oxide_api::application::RouteBuilder<'a> {
+        #vis fn #fn_name() -> aws_oxide_api::application::RouteBuilder {
             let route = aws_oxide_api::route::Route::new(
                 #method,
                 #route,

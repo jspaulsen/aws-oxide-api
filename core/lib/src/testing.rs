@@ -17,11 +17,11 @@ use crate::{
 };
 
 
-pub struct TestApplication<'a>(Application<'a>);
+pub struct TestApplication(Application);
 
 
-impl<'a> TestApplication<'a> {
-    pub fn new(app: Application<'a>) -> Self {
+impl TestApplication {
+    pub fn new(app: Application) -> Self {
         Self(app)
     }
 
