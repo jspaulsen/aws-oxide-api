@@ -1,0 +1,15 @@
+[package]
+name = "aws-oxide-api-codegen"
+version = "0.1.0"
+authors = ["jspaulsen <jpaulsen@lo3energy.com>"]
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+aws-oxide-api-route = { path = "../route/" }
+proc-macro2 = "1.0.21"
+syn = "1.0.41"
+quote = "1.0.7"
+serde_json = "1.0.60"
