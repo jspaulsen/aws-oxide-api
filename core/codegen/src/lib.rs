@@ -158,7 +158,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
 
             aws_oxide_api::application::RouteBuilder::new(
                 route,
-                #fn_shim,
+                Box::new(#fn_shim),
             )
         }
 
