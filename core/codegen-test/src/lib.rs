@@ -118,6 +118,7 @@ mod tests {
         assert_eq!(body_json["field"], expected_field);
     }
 
+    #[derive(Clone)]
     pub struct Something {
         a_field: String
     }
@@ -128,7 +129,7 @@ mod tests {
         #[route("POST", "/some/field")]
         fn route_test_fn(state: State<Something>) -> Result<impl IntoResponse, ResponseError> {
             let ret = json!({
-                "a_field": state.a_field,
+                "a_field": &state.a_field,
             });
 
             Ok(ret)

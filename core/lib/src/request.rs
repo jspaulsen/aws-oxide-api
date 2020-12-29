@@ -18,16 +18,16 @@ pub struct InnerRequest {
     request: LambdaRequest,
     incoming: IncomingRoute,
     parameters: HashMap<String, String>,
-    pub container: Arc<Container>,
 }
 
 #[derive(Clone)]
 pub struct OxideRequest {
     pub inner: Arc<InnerRequest>,
+    pub container: Arc<Container>,
 }
 
 impl InnerRequest {
-    fn new(request: LambdaRequest, container: Arc<Container>) -> Self {
+    fn new(request: LambdaRequest) -> Self {
         let incoming = IncomingRoute::from(&request);
         let parameters = parse_query(&request.uri());
 
@@ -35,7 +35,6 @@ impl InnerRequest {
             request,
             incoming,
             parameters,
-            container,
         }
     }
 }
@@ -43,12 +42,8 @@ impl InnerRequest {
 impl OxideRequest {
     pub fn new(request: LambdaRequest, container: Arc<Container>) -> Self {
         Self {
-            inner: Arc::new(
-                InnerRequest::new(
-                    request,
-                    container,
-                )
-            )
+            inner: Arc::new(InnerRequest::new(request)),
+            container,
         }
     }
 

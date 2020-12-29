@@ -26,11 +26,6 @@ pub type SharedRoute = Arc<Route>;
 type RouteFunction = Box<dyn FnMut(OxideRequest, Arc<Route>) -> futures::future::BoxFuture<'static, RouteOutcome> + Send>;
 
 
-
-// pub trait RouteFunction {
-
-// }
-
 pub static CONTAINER: Container = Container::new();
 
 /// Route object which is stored and
@@ -92,7 +87,9 @@ impl ApplicationBuilder {
         Ok(ret)
     }
 
-    pub fn manage<T: Sync + Send + 'static>(self, data: T) -> Self {
+    /// Allows the API to "manage" data
+    /// TODO: This is not useful + is an ugly hack requiring cloning data
+    pub fn manage<T: Sync + Send + Clone + 'static>(self, data: T) -> Self {
         self.container.set(data);
         self
     }
