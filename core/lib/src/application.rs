@@ -23,24 +23,13 @@ use crate::{
 use aws_oxide_api_route::Route;
 
 pub type SharedRoute = Arc<Route>;
+type RouteFunction = Box<dyn FnMut(OxideRequest, Arc<Route>) -> futures::future::BoxFuture<'static, RouteOutcome> + Send>;
 
 
-#[async_trait::async_trait]
-pub trait RouteFunction: Send + 'static {
-    async fn route(&mut self, request: OxideRequest, route: SharedRoute) -> RouteOutcome;
-}
 
-#[async_trait::async_trait]
-impl<F, Fut> RouteFunction for F
-where
-    F: FnMut(OxideRequest, SharedRoute) -> Fut + Send + 'static,
-    Fut: Future<Output = RouteOutcome> + Send + 'static,
-{
-    async fn route(&mut self, request: OxideRequest, route: SharedRoute) -> RouteOutcome {
-        (self)(request, route)
-            .await
-    }
-}
+// pub trait RouteFunction {
+
+// }
 
 pub static CONTAINER: Container = Container::new();
 
@@ -48,7 +37,7 @@ pub static CONTAINER: Container = Container::new();
 /// associated with a handler function
 struct StoredRoute {
     route: SharedRoute,
-    func: Box<dyn RouteFunction>
+    func: RouteFunction,
 }
 
 pub struct ApplicationBuilder {
@@ -63,7 +52,7 @@ pub struct Application {
 
 pub struct RouteBuilder {
     route: Route,
-    func: Box<dyn RouteFunction>
+    func: RouteFunction,
 }
 
 impl ApplicationBuilder {
@@ -110,10 +99,14 @@ impl ApplicationBuilder {
 }
 
 impl RouteBuilder {
-    pub fn new(route: Route, func: Box<dyn RouteFunction>) -> Self {
-        RouteBuilder {
+    pub fn new<Func, Fut>(route: Route, mut func: Func) -> Self
+    where
+        Func: (FnMut(OxideRequest, SharedRoute) -> Fut) + Send + 'static,
+        Fut: Future<Output = RouteOutcome> + Send + 'static,
+    {
+        Self {
             route,
-            func,
+            func: Box::new(move |req: OxideRequest, route: SharedRoute| Box::pin(func(req, route))),
         }
     }
 }
@@ -135,6 +128,7 @@ impl Default for ApplicationBuilder {
         }
     }
 }
+
 
 impl Application {
     fn new(routes: Vec<StoredRoute>, container: Container) -> Self {
@@ -168,7 +162,7 @@ impl Application {
 
             for stored in &mut self.routes {
                 if stored.route.matches(&incoming_route) {
-                    match stored.func.route(request.clone(), stored.route.clone()).await {
+                    match (stored.func)(request.clone(), stored.route.clone()).await {
                         Outcome::Response(r) => {
                             ret = Some(r);
                             break;
@@ -198,11 +192,11 @@ async fn default_no_route(_: &OxideRequest) -> ResponseResult {
 
 #[cfg(test)]
 mod tests {
+    use futures::Future;
     use crate::{
         application::{
             Application,
             RouteBuilder,
-            RouteFunction,
             SharedRoute,
         },
         Context,
@@ -233,7 +227,11 @@ mod tests {
     }
 
     // This is handled by code generation
-    fn route_builder<'a>(method: &'a str, uri: &'a str, func: Box<dyn RouteFunction>) -> impl FnOnce() -> RouteBuilder {
+    fn route_builder<'a, Func, Fut>(method: &'a str, uri: &'a str, func: Func) -> impl FnOnce() -> RouteBuilder
+    where
+        Func: (FnMut(OxideRequest, SharedRoute) -> Fut) + Send + 'static,
+        Fut: Future<Output = RouteOutcome> + Send + 'static,
+    {
         let builder = RouteBuilder::new(
             Route::new(
                 method,
@@ -248,9 +246,9 @@ mod tests {
     #[test]
     fn test_builder() {
         let app = Application::builder()
-            .add_route(route_builder("GET", "/", Box::new(succ_shim)))
-            .add_route(route_builder("GET", "/foo", Box::new(succ_shim)))
-            .add_route(route_builder("GET", "/foo/bar/baz", Box::new(forward_shim)))
+            .add_route(route_builder("GET", "/", succ_shim))
+            .add_route(route_builder("GET", "/foo", succ_shim))
+            .add_route(route_builder("GET", "/foo/bar/baz", forward_shim))
             .build()
             .unwrap();
 
@@ -260,8 +258,8 @@ mod tests {
     #[tokio::test]
     async fn test_handler() {
         let mut app = Application::builder()
-            .add_route(route_builder("GET", "/foo/bar", Box::new(succ_shim)))
-            .add_route(route_builder("GET", "/bar/baz", Box::new(forward_shim)))
+            .add_route(route_builder("GET", "/foo/bar", succ_shim))
+            .add_route(route_builder("GET", "/bar/baz", forward_shim))
             .build()
             .unwrap();
 
@@ -285,8 +283,8 @@ mod tests {
     #[tokio::test]
     async fn test_handler_default() {
         let mut app = Application::builder()
-            .add_route(route_builder("GET", "/foo/bar", Box::new(succ_shim)))
-            .add_route(route_builder("GET", "/bar/baz", Box::new(forward_shim)))
+            .add_route(route_builder("GET", "/foo/bar", succ_shim))
+            .add_route(route_builder("GET", "/bar/baz", forward_shim))
             .build()
             .unwrap();
 
