@@ -31,8 +31,8 @@ impl InnerRequest {
         let incoming = IncomingRoute::from(&request);
         let parameters = parse_query(&request.uri());
 
-        println!("Request is {:?}", request);
-        println!("Uri is {:?}", request.uri());
+        println!("Request is {:#?}", request);
+        println!("Uri is {}", request.uri());
 
         Self {
             request,
