@@ -33,6 +33,7 @@ impl InnerRequest {
 
         println!("Request is {:#?}", request);
         println!("Uri is {}", request.uri());
+        println!("Extensions are {:#?}", request.extensions());
 
         Self {
             request,
