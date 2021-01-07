@@ -32,7 +32,7 @@ use quote::{
 
 #[derive(Debug)]
 struct ParameterType<'a> {
-    param_type: &'a Ident,  // NOTE: Will eventually be used
+    param_type: &'a Ident,
     param_path: &'a syn::Path,
 }
 
@@ -44,7 +44,29 @@ struct Parameter<'a> {
 }
 
 
+
 #[proc_macro_attribute]
+/// `route`
+///
+/// The `route` macro transforms a user defined function into a function in which
+/// aws-oxide-api can route a request to.
+/// # Arguments
+/// * `method` - HTTP Method
+/// * `route` - Route path to match;
+///
+/// Dynamic segments in the path can be defined with a prefix of `:`, e.g.,
+/// ```
+/// #[route("POST", "/some/:id_a/another/:id_b")]
+/// ````
+/// which can then be defined as arguments.
+///
+/// # Examples
+/// ```rust
+/// #[route("POST", "/some/:id_a/another/:id_b")]
+/// async example_route(id_a: i32, id_b: String, body: Json<ExampleJson>) -> Result<impl IntoResponse, ResponseError> {
+///    Ok("")
+///}
+/// ```
 pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     let args = parse_macro_input!(args as AttributeArgs);
     let input = syn::parse_macro_input!(item as ImplItemMethod);
@@ -141,41 +163,38 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         None
     };
 
-    // Code generation is a little convoluted; here's the TL;DR
-    // Two functions are generated:  {fn}_shim and the RouteBuilder returning {fn}
-
-    // A shim function is generated which wraps the user defined function, pulling and parsing
-    // the parameters (and eventually any stored state);
-    //
-    // The route function name is replaced with a function that returns a RouteBuilder containing a reference
-    // to the route and the shimmed function.
     let ret = quote_spanned! { input.span() =>
-        #vis fn #fn_name() -> aws_oxide_api::application::RouteBuilder {
+        // Take and rename the user provided function
+        #asyncness fn #fn_actual(#inputs) #ret #body
+
+        // Take the existing {fn} and redefine as a function which returns a StoredRoute
+        // This is consumed by ApplicationBuilder via `add_route`
+        #vis fn #fn_name() -> aws_oxide_api::application::StoredRoute {
             let route = aws_oxide_api::route::Route::new(
                 #method,
                 #route,
             ).expect("Major bug in code generation; please report with offending function signature.");
 
-            aws_oxide_api::application::RouteBuilder::new(
-                route,
-                #fn_shim,
-            )
+            aws_oxide_api::application::StoredRoute {
+                route: std::sync::Arc::new(route),
+                func: #fn_shim,
+            }
         }
 
         #(#attrs)*
-        pub async fn #fn_shim(request: aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
-            let #mapping = route.mapped_param_value(request.incoming_route());
+        pub fn #fn_shim<'a>(request: &'a aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::futures::future::BoxFuture<'a, aws_oxide_api::response::RouteOutcome> {
+            pub async fn inner_shim(request: &'_ aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
+                let #mapping = route.mapped_param_value(request.incoming_route());
+                #(#param_expansion)*
 
-            #asyncness fn #fn_actual(#inputs) #ret #body
+                aws_oxide_api::response::RouteOutcome::Response(
+                    #fn_actual ( #(#param_ident),* )
+                        #await_fn
+                        .map(IntoResponse::into_response)
+                )
+            };
 
-            #(#param_expansion)*
-
-            // #fn_call
-            aws_oxide_api::response::RouteOutcome::Response(
-                #fn_actual ( #(#param_ident),* )
-                    #await_fn
-                    .map(IntoResponse::into_response)
-            )
+            Box::pin(inner_shim(request, route))
         }
     };
 

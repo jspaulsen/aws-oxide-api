@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use crate::{
     Body,
-    IntoResponse,
     LambdaResponse,
     request::OxideRequest,
 };
@@ -10,7 +9,6 @@ pub use json::Json;
 
 mod json;
 
-pub type BoxedIntoResponse = Box<dyn IntoResponse>;
 
 pub enum GuardOutcome<V> {
     Value(V),

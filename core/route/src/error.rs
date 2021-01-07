@@ -8,7 +8,6 @@ pub enum RouteError {
     InvalidMethod,
     InvalidRoute { route: String },
     InvalidSegmentParameter { segment: String },
-
 }
 
 impl fmt::Display for RouteError {
@@ -30,7 +29,6 @@ impl RouteError {
 }
 
 impl Error for RouteError {}
-
 
 impl From<http::method::InvalidMethod> for RouteError {
     fn from(_: http::method::InvalidMethod) -> Self {

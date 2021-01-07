@@ -17,7 +17,6 @@ mod tests {
     use tokio;
 
     #[derive(Deserialize)]
-
     pub struct ExampleJson {
         field: String
     }
