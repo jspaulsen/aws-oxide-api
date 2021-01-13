@@ -165,9 +165,9 @@ mod tests {
             StoredRoute,
             StoredRouteFunction,
         },
+        Body,
         Context,
         netlify_lambda_http::{
-            Body,
             Response,
         },
         http::Request as HttpRequest,

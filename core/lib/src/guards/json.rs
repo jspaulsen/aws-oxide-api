@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use serde_json;
 use crate::{
+    Body,
     guards::{
         Guard,
         GuardOutcome,
@@ -15,7 +16,6 @@ use crate::{
     http,
     IntoResponse,
     JsonResponse,
-    netlify_lambda_http::Body,
     request::OxideRequest,
 };
 

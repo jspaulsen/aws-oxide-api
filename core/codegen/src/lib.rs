@@ -55,16 +55,16 @@ struct Parameter<'a> {
 /// * `route` - Route path to match;
 ///
 /// Dynamic segments in the path can be defined with a prefix of `:`, e.g.,
-/// ```
+/// ```ignore
 /// #[route("POST", "/some/:id_a/another/:id_b")]
 /// ````
 /// which can then be defined as arguments.
 ///
 /// # Examples
-/// ```rust
+/// ```ignore
 /// #[route("POST", "/some/:id_a/another/:id_b")]
-/// async example_route(id_a: i32, id_b: String, body: Json<ExampleJson>) -> Result<impl IntoResponse, ResponseError> {
-///    Ok("")
+/// async fn example_route(id_a: i32, id_b: String) -> Result<impl IntoResponse, ResponseError> {
+///    Ok(json!({}))
 ///}
 /// ```
 pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {

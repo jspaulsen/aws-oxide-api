@@ -3,10 +3,10 @@ use std::sync::Arc;
 use aws_oxide_api_route::IncomingRoute;
 use state::Container;
 use crate::{
+    Body,
     http::HeaderMap,
     LambdaRequest,
     netlify_lambda_http::{
-        Body,
         RequestExt,
         StrMap,
     },

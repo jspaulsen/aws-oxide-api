@@ -1,8 +1,8 @@
 use crate::{
+    Body,
     http,
     IntoResponse,
     netlify_lambda_http::{
-        Body,
         Response,
     },
     outcome::Outcome,

@@ -1,6 +1,6 @@
+pub use aws_lambda_events::encodings::Body;
 pub use netlify_lambda_http::{
     Context,
-    Body,
     IntoResponse,
     lambda::lambda,
     Request as LambdaRequest,

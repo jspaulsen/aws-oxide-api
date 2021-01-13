@@ -1,5 +1,6 @@
 use crate::{
     Application,
+    Body,
     Context,
     http::{
         HeaderMap,
@@ -7,7 +8,6 @@ use crate::{
     },
     IntoResponse,
     netlify_lambda_http::{
-        Body,
         Request,
     },
     response::{
