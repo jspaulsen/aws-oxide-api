@@ -73,7 +73,7 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
     let vis = &input.vis;
     let asyncness = &input.sig.asyncness;
     let attrs = &input.attrs;
-    let ret = &input.sig.output;
+    let return_type = &input.sig.output;
     let fn_name = &input.sig.ident;
     let body = &input.block;
     let inputs = &input.sig.inputs;
@@ -163,9 +163,26 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         None
     };
 
+    let result = if is_result_type(return_type) {
+        let ret = quote! {
+            let result = result
+                .map(aws_oxide_api::IntoResponse::into_response);
+        };
+
+        Some(ret)
+    } else {
+        let ret = quote! {
+            //let intermediate = let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request).await
+            let result = Ok(result.into_response());
+        };
+
+        Some(ret)
+    };
+
+
     let ret = quote_spanned! { input.span() =>
         // Take and rename the user provided function
-        #asyncness fn #fn_actual(#inputs) #ret #body
+        #asyncness fn #fn_actual(#inputs) #return_type #body
 
         // Take the existing {fn} and redefine as a function which returns a StoredRoute
         // This is consumed by ApplicationBuilder via `add_route`
@@ -185,13 +202,17 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         pub fn #fn_shim<'a>(request: &'a aws_oxide_api::RouteRequest<'_>, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::futures::future::BoxFuture<'a, aws_oxide_api::response::RouteOutcome> {
             pub async fn inner_shim(request: &'_ aws_oxide_api::RouteRequest<'_>, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
                 let #mapping = route.mapped_param_value(request.incoming_route());
+
                 #(#param_expansion)*
 
-                aws_oxide_api::response::RouteOutcome::Response(
-                    #fn_actual ( #(#param_ident),* )
-                        #await_fn
-                        .map(IntoResponse::into_response)
-                )
+                let result = #fn_actual ( #(#param_ident),* )
+                    #await_fn;
+
+                // generate result based on the result type of the calling
+                // function
+                #result
+
+                aws_oxide_api::response::RouteOutcome::Response(result)
             };
 
             Box::pin(inner_shim(request, route))
@@ -327,20 +348,24 @@ fn extract_parameter_name<'a>(pat_type: &'a PatType) -> Option<&'a Ident> {
 
 fn extract_parameter_type<'a>(pat_type: &'a PatType) -> Option<ParameterType> {
     match &*pat_type.ty {
-        Type::Path(type_path) => {
-            let segment = type_path.path.segments.first()?;
-            let param_type = &segment.ident;
-            let param_path = &type_path.path;
-
-            Some(
-                ParameterType {
-                    param_path,
-                    param_type,
-                }
-            )
-        },
+        Type::Path(type_path) => extract_type(type_path),
         _ => None,
     }
+}
+
+
+fn extract_type<'a>(type_path: &'a syn::TypePath) -> Option<ParameterType> {
+    let segment = type_path
+        .path
+        .segments
+        .first()?;
+
+    Some(
+        ParameterType {
+            param_path: &type_path.path,
+            param_type:  &segment.ident,
+        }
+    )
 }
 
 
@@ -366,5 +391,29 @@ fn extract_parameter_generic_type<'a>(parameter: &'a Parameter) -> Option<&'a Id
             }
         },
         _ => None
+    }
+}
+
+
+fn is_result_type(return_type: &syn::ReturnType) -> bool {
+    if let syn::ReturnType::Type(_, ty) = return_type {
+        match ty.as_ref() {
+            Type::Path(type_path) => {
+                let parameter_type = extract_type(type_path);
+
+                if let Some(parameter_type) = parameter_type {
+                    if parameter_type.param_type == "Result" {
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            },
+            _ => false,
+        }
+    } else {
+        false
     }
 }

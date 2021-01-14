@@ -4,7 +4,6 @@ use aws_oxide_api::{
     Context,
     http,
     IntoResponse,
-    ResponseError,
     route,
 };
 
@@ -49,12 +48,12 @@ async fn main(/* request: Request, context: Context */) {
 
 
 #[route("GET", "/some/:id")]
-async fn hello(id: i32) -> Result<impl IntoResponse, ResponseError> {
-    Ok(json!({"id": id}))
+async fn hello(id: i32) -> impl IntoResponse {
+    json!({"id": id})
 }
 
 
 #[route("POST", "/some/:id")]
-fn sync_example(id: i32) -> Result<impl IntoResponse, ResponseError> {
-    Ok(json!({"id": id}))
+fn sync_example(id: i32) -> serde_json::Value {
+    json!({"id": id})
 }
