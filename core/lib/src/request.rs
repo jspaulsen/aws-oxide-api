@@ -17,10 +17,14 @@ pub struct InnerRequest {
     incoming: IncomingRoute,
 }
 
-#[derive(Clone)]
-pub struct OxideRequest {
+pub struct RouteRequest<'a> {
     pub inner: Arc<InnerRequest>,
-    pub container: Arc<Container>,
+    pub container: &'a Container,
+}
+
+/// Represents an incoming request
+pub struct Request {
+    inner: Arc<InnerRequest>
 }
 
 impl InnerRequest {
@@ -34,8 +38,8 @@ impl InnerRequest {
     }
 }
 
-impl OxideRequest {
-    pub fn new(request: LambdaRequest, container: Arc<Container>) -> Self {
+impl<'a> RouteRequest<'a> {
+    pub fn new(request: LambdaRequest, container: &'a Container) -> Self {
         Self {
             inner: Arc::new(InnerRequest::new(request)),
             container,
@@ -54,10 +58,61 @@ impl OxideRequest {
     }
 
     pub fn body(&self) -> &Body {
-        self.inner.request.body()
+        self
+            .inner
+            .request
+            .body()
     }
 
     pub fn headers(&self) -> &HeaderMap {
-        &self.inner.request.headers()
+        &self
+            .inner
+            .request
+            .headers()
+    }
+
+    /// Converts an internal request into one which is
+    /// exposed to a route function
+    pub fn as_request(&self) -> Request {
+        Request::new(
+            self
+                .inner
+                .clone()
+        )
+    }
+}
+
+impl Request {
+    pub fn new(request: Arc<InnerRequest>) -> Self {
+        Self {
+            inner: request
+        }
+    }
+
+    pub fn incoming_route(&self) -> &IncomingRoute {
+        &self
+            .inner
+            .incoming
+    }
+
+    pub fn parameters(&self) -> StrMap {
+        self
+            .inner
+            .request
+            .query_string_parameters()
+    }
+
+    pub fn body(&self) -> &Body {
+        self
+            .inner
+            .request
+            .body()
+    }
+
+    pub fn headers(&self) -> &HeaderMap {
+        &self
+            .inner
+            .request
+            .headers()
     }
 }

@@ -57,14 +57,14 @@ struct Parameter<'a> {
 /// Dynamic segments in the path can be defined with a prefix of `:`, e.g.,
 /// ```ignore
 /// #[route("POST", "/some/:id_a/another/:id_b")]
-/// ````
+/// ```
 /// which can then be defined as arguments.
 ///
 /// # Examples
 /// ```ignore
 /// #[route("POST", "/some/:id_a/another/:id_b")]
-/// async fn example_route(id_a: i32, id_b: String) -> Result<impl IntoResponse, ResponseError> {
-///    Ok(json!({}))
+/// async fn example_route(id_a: i32, id_b: String, body: Body) -> Result<impl IntoResponse, ResponseError> {
+///    Ok("")
 ///}
 /// ```
 pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
@@ -182,8 +182,8 @@ pub fn route(args: TokenStream, item: TokenStream) -> TokenStream {
         }
 
         #(#attrs)*
-        pub fn #fn_shim<'a>(request: &'a aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::futures::future::BoxFuture<'a, aws_oxide_api::response::RouteOutcome> {
-            pub async fn inner_shim(request: &'_ aws_oxide_api::OxideRequest, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
+        pub fn #fn_shim<'a>(request: &'a aws_oxide_api::RouteRequest<'_>, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::futures::future::BoxFuture<'a, aws_oxide_api::response::RouteOutcome> {
+            pub async fn inner_shim(request: &'_ aws_oxide_api::RouteRequest<'_>, route: aws_oxide_api::application::SharedRoute) -> aws_oxide_api::response::RouteOutcome {
                 let #mapping = route.mapped_param_value(request.incoming_route());
                 #(#param_expansion)*
 
@@ -267,7 +267,7 @@ fn guard_match(parameter: &Parameter, pname_v: &Ident) -> proc_macro2::TokenStre
     };
 
     quote! {
-        let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request.clone()).await {
+        let #pname_v: #param_type = match <#param_type as aws_oxide_api::guards::Guard>::from_request(request).await {
             aws_oxide_api::guards::GuardOutcome::Value(v) => v,
             aws_oxide_api::guards::GuardOutcome::Error(err) => return aws_oxide_api::response::RouteOutcome::Response(Ok(err)),
             aws_oxide_api::guards::GuardOutcome::Forward => return aws_oxide_api::response::RouteOutcome::Forward,

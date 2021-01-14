@@ -16,7 +16,8 @@ use crate::{
     http,
     IntoResponse,
     JsonResponse,
-    request::OxideRequest,
+    netlify_lambda_http::Body,
+    request::RouteRequest,
 };
 
 
@@ -50,8 +51,8 @@ impl<T: DeserializeOwned> DerefMut for Json<T> {
 }
 
 #[async_trait]
-impl<T: DeserializeOwned> Guard for Json<T> {
-    async fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
+impl<'a, 'r, T: DeserializeOwned> Guard<'a, 'r> for Json<T> {
+    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<Self> {
         let header = request
             .headers()
             .get(http::header::CONTENT_TYPE);

@@ -2,7 +2,10 @@ use async_trait::async_trait;
 use crate::{
     Body,
     LambdaResponse,
-    request::OxideRequest,
+    request::{
+        RouteRequest,
+        Request,
+    },
 };
 
 pub use json::Json;
@@ -17,20 +20,23 @@ pub enum GuardOutcome<V> {
 }
 
 #[async_trait]
-pub trait Guard: Sized {
-    async fn from_request(request: OxideRequest) -> GuardOutcome<Self>;
+pub trait Guard<'a, 'r>: Sized {
+    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<Self>;
 }
 
 #[async_trait]
-impl Guard for OxideRequest {
-    async fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
-        GuardOutcome::Value(request)
+impl<'a, 'r> Guard<'a, 'r> for Request {
+    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<Self> {
+        GuardOutcome::Value(
+            request
+                .as_request()
+        )
     }
 }
 
 #[async_trait]
-impl Guard for Body {
-    async fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
+impl<'a, 'r> Guard<'a, 'r> for Body {
+    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<Self> {
         let body = match request.body() {
             Body::Empty => Body::Empty,
             Body::Text(body) => Body::Text(body.clone()),

@@ -5,31 +5,31 @@ use crate::{
         Guard,
         GuardOutcome,
     },
-    OxideRequest,
+    RouteRequest,
 };
 
 
-pub struct State<T: Send + Sync>(T);
+pub struct State<'r, T: Send + Sync + 'static>(&'r T);
 
 
-impl<T: Send + Sync> State<T> {
-    pub fn new(data: T) -> Self {
+impl<'r, T: Send + Sync + 'static> State<'r, T> {
+    pub fn new(data: &'r T) -> Self {
         Self(data)
     }
 }
 
-impl<T: Send + Sync + Clone> Deref for State<T> {
+impl<'r, T: Send + Sync> Deref for State<'r, T> {
     type Target = T;
 
     #[inline(always)]
     fn deref(&self) -> &T {
-        &self.0
+        self.0
     }
 }
 
 #[async_trait]
-impl<'a, T: Send + Sync + Clone + 'static> Guard for State<T> {
-    async fn from_request(request: OxideRequest) -> GuardOutcome<Self> {
+impl<'a, 'r, T: Send + Sync + 'static> Guard<'a, 'r> for State<'r, T> {
+    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<State<'r, T>> {
         let data = request
             .container
             .get::<T>()

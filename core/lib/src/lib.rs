@@ -18,7 +18,10 @@ pub use response::{
 };
 pub use crate::state::State;
 pub use guards::Guard;
-pub use request::OxideRequest;
+pub use request::{
+    RouteRequest,
+    Request,
+};
 pub use testing::TestApplication;
 
 pub use aws_oxide_api_route as route;

@@ -5,7 +5,7 @@ use aws_oxide_api::{
     Body,
     http,
     IntoResponse,
-    OxideRequest,
+    Request,
     Response,
     ResponseError,
     route,
@@ -61,7 +61,7 @@ async fn main() {
 
 
 #[route("GET", "/some/:id")]
-async fn example(id: i32, request: OxideRequest) -> Result<impl IntoResponse, ResponseError> {
+async fn example(id: i32, request: Request) -> Result<impl IntoResponse, ResponseError> {
     let bogus = request
         .headers()
         .get("x-bogus-header");

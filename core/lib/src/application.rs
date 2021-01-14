@@ -12,13 +12,13 @@ use crate::{
         ResponseResult,
         RouteOutcome,
     },
-    request::OxideRequest,
+    request::RouteRequest,
 };
 
 use aws_oxide_api_route::Route;
 
 pub type SharedRoute = Arc<Route>;
-pub type StoredRouteFunction = for<'a> fn(&'a OxideRequest, Arc<Route>) -> futures::future::BoxFuture<'a, RouteOutcome>;
+pub type StoredRouteFunction = for<'a> fn(&'a RouteRequest, Arc<Route>) -> futures::future::BoxFuture<'a, RouteOutcome>;
 
 pub static CONTAINER: Container = Container::new();
 
@@ -36,7 +36,7 @@ pub struct ApplicationBuilder {
 }
 
 pub struct Application {
-    container: Arc<Container>,
+    container: Container,
     routes: Vec<StoredRoute>,
 }
 
@@ -100,7 +100,7 @@ impl Application {
     fn new(routes: Vec<StoredRoute>, container: Container) -> Self {
         Self {
             routes,
-            container: Arc::new(container),
+            container,
         }
     }
 
@@ -109,22 +109,16 @@ impl Application {
     }
 
     /// Entrypoint from Lambda main
-    pub async fn handle(&mut self, event: LambdaRequest, _context: Context) -> Result<impl IntoResponse, ResponseError> {
-        let request = OxideRequest::new(
+    pub async fn handle(&'_ mut self, event: LambdaRequest, _context: Context) -> Result<impl IntoResponse, ResponseError> {
+        let request = RouteRequest::new(
             event,
-            self
-                .container
-                .clone()
+            &self.container,
         );
 
-        self.call_req(request).await
-    }
-
-    /// Handles the logic
-    pub async fn call_req(&mut self, request: OxideRequest) -> ResponseResult {
-        let incoming_route = request.incoming_route();
         let outgoing = {
             let mut ret: Option<ResponseResult> = None;
+            let incoming_route = request
+                .incoming_route();
 
             for stored in &mut self.routes {
                 if stored.route.matches(&incoming_route) {
@@ -143,7 +137,6 @@ impl Application {
             ret
         };
 
-        // I wish async closures were stable
         match outgoing {
             Some(ret) => ret,
             None => default_no_route(&request).await
@@ -151,7 +144,7 @@ impl Application {
     }
 }
 
-async fn default_no_route(_: &OxideRequest) -> ResponseResult {
+async fn default_no_route(_: &RouteRequest<'_>) -> ResponseResult {
     Ok(method_not_found())
 }
 
@@ -173,13 +166,13 @@ mod tests {
         http::Request as HttpRequest,
         IntoResponse,
         response::RouteOutcome,
-        request::OxideRequest,
+        request::RouteRequest,
         route::Route,
     };
 
     // Provides a shim which will always return 204
-    fn succ_shim<'a>(request: &'a OxideRequest, route: SharedRoute) -> futures::future::BoxFuture<'a, RouteOutcome> {
-        async fn inner_shim(_: &'_ OxideRequest, _: SharedRoute) -> RouteOutcome {
+    fn succ_shim<'a>(request: &'a RouteRequest<'_>, route: SharedRoute) -> futures::future::BoxFuture<'a, RouteOutcome> {
+        async fn inner_shim(_: &'_ RouteRequest<'_>, _: SharedRoute) -> RouteOutcome {
             let ret = Response::builder()
                 .status(204)
                 .body(Body::Empty)
@@ -192,8 +185,8 @@ mod tests {
     }
 
     // Provides a shim which will always forward
-    fn forward_shim<'a>(request: &'a OxideRequest, route: SharedRoute) -> futures::future::BoxFuture<'a, RouteOutcome> {
-        async fn inner_shim(_: &'_ OxideRequest, _: SharedRoute) -> RouteOutcome {
+    fn forward_shim<'a>(request: &'a RouteRequest<'_>, route: SharedRoute) -> futures::future::BoxFuture<'a, RouteOutcome> {
+        async fn inner_shim(_: &'_ RouteRequest<'_>, _: SharedRoute) -> RouteOutcome {
             RouteOutcome::Forward
         }
 
