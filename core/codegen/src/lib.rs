@@ -63,7 +63,7 @@ struct Parameter<'a> {
 /// # Examples
 /// ```ignore
 /// #[route("POST", "/some/:id_a/another/:id_b")]
-/// async fn example_route(id_a: i32, id_b: String, body: Body) -> Result<impl IntoResponse, ResponseError> {
+/// async fn example_route(id_a: i32, id_b: String, body: Binary) -> Result<impl IntoResponse, ResponseError> {
 ///    Ok("")
 ///}
 /// ```

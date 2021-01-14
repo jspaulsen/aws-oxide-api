@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use crate::{
-    Body,
     LambdaResponse,
     request::{
         RouteRequest,
@@ -8,8 +7,13 @@ use crate::{
     },
 };
 
+pub use body::{
+    Binary,
+    Text,
+};
 pub use json::Json;
 
+mod body;
 mod json;
 
 
@@ -31,18 +35,5 @@ impl<'a, 'r> Guard<'a, 'r> for Request {
             request
                 .as_request()
         )
-    }
-}
-
-#[async_trait]
-impl<'a, 'r> Guard<'a, 'r> for Body {
-    async fn from_request(request: &'a RouteRequest<'r>) -> GuardOutcome<Self> {
-        let body = match request.body() {
-            Body::Empty => Body::Empty,
-            Body::Text(body) => Body::Text(body.clone()),
-            Body::Binary(body) => Body::Binary(body.clone()),
-        };
-
-        GuardOutcome::Value(body)
     }
 }

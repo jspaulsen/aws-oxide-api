@@ -16,7 +16,6 @@ use crate::{
     http,
     IntoResponse,
     JsonResponse,
-    netlify_lambda_http::Body,
     request::RouteRequest,
 };
 
