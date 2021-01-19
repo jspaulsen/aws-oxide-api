@@ -167,4 +167,46 @@ mod tests {
 
         assert_eq!(result_payload["a_field"], expected_field);
     }
+
+    #[tokio::test]
+    async fn test_return_type() {
+        #[route("GET", "/some/:id_a")]
+        async fn into_return_type(id_a: i32) -> serde_json::Value {
+            json!({"id_a": id_a})
+        }
+
+        let mut app = Application::builder()
+            .add_route(into_return_type)
+            .build()
+            .expect("Application should build successfully");
+
+        let expected_id: i32 = 12345;
+        let uri = format!("/some/{}", expected_id);
+
+        let req = HttpRequest::builder()
+            .method("GET")
+            .uri(uri)
+            .body(Body::Empty)
+            .expect("Request should build successfully");
+
+        let result = &app.handle(req, Context::default())
+            .await
+            .unwrap()
+            .into_response();
+
+        let body_json = match result.body() {
+            Body::Text(body) => {
+                body
+            },
+            _ => {
+                assert!(false, "Only Text should be returned");
+                unreachable!()
+            }
+        };
+
+        let result_payload: serde_json::Value = serde_json::from_str(body_json)
+            .expect("Body should be deserializable JSON");
+
+        assert_eq!(result_payload["id_a"], expected_id)
+    }
 }
